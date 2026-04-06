@@ -9,7 +9,7 @@ import { BASE_URL } from "~/seo.config";
 import { mergeRouteMeta } from "~/utils/meta";
 import type { Route } from "./+types/contact";
 
-const SUPPORT_EMAIL = "support@smail.pw";
+const SUPPORT_EMAIL = "support@itshuai.cc";
 
 type ContactCopy = {
 	metaTitle: string;
@@ -26,8 +26,8 @@ type ContactCopy = {
 
 const CONTACT_COPY: Record<Locale, ContactCopy> = {
 	en: {
-		metaTitle: "Contact | smail.pw",
-		metaDescription: "Contact smail.pw support by email.",
+		metaTitle: "Contact | itshuai.cc",
+		metaDescription: "Contact itshuai.cc support by email.",
 		tag: "Support",
 		title: "Contact support",
 		description:
@@ -40,8 +40,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "Back to homepage",
 	},
 	zh: {
-		metaTitle: "联系我们 | smail.pw",
-		metaDescription: "通过邮箱联系 smail.pw 支持团队。",
+		metaTitle: "联系我们 | itshuai.cc",
+		metaDescription: "通过邮箱联系 itshuai.cc 支持团队。",
 		tag: "支持",
 		title: "联系支持团队",
 		description:
@@ -54,8 +54,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "返回首页",
 	},
 	es: {
-		metaTitle: "Contacto | smail.pw",
-		metaDescription: "Contacta con soporte de smail.pw por correo.",
+		metaTitle: "Contacto | itshuai.cc",
+		metaDescription: "Contacta con soporte de itshuai.cc por correo.",
 		tag: "Soporte",
 		title: "Contactar soporte",
 		description:
@@ -68,8 +68,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "Volver al inicio",
 	},
 	fr: {
-		metaTitle: "Contact | smail.pw",
-		metaDescription: "Contacter le support smail.pw par email.",
+		metaTitle: "Contact | itshuai.cc",
+		metaDescription: "Contacter le support itshuai.cc par email.",
 		tag: "Support",
 		title: "Contacter le support",
 		description:
@@ -82,8 +82,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "Retour à l'accueil",
 	},
 	de: {
-		metaTitle: "Kontakt | smail.pw",
-		metaDescription: "Kontaktiere den smail.pw Support per E-Mail.",
+		metaTitle: "Kontakt | itshuai.cc",
+		metaDescription: "Kontaktiere den itshuai.cc Support per E-Mail.",
 		tag: "Support",
 		title: "Support kontaktieren",
 		description:
@@ -96,8 +96,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "Zur Startseite",
 	},
 	ja: {
-		metaTitle: "お問い合わせ | smail.pw",
-		metaDescription: "smail.pw サポートへの連絡先メール。",
+		metaTitle: "お問い合わせ | itshuai.cc",
+		metaDescription: "itshuai.cc サポートへの連絡先メール。",
 		tag: "サポート",
 		title: "サポートへ連絡",
 		description:
@@ -110,8 +110,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "ホームへ戻る",
 	},
 	ko: {
-		metaTitle: "문의하기 | smail.pw",
-		metaDescription: "smail.pw 지원팀에 이메일로 문의하세요.",
+		metaTitle: "문의하기 | itshuai.cc",
+		metaDescription: "itshuai.cc 지원팀에 이메일로 문의하세요.",
 		tag: "지원",
 		title: "지원팀 문의",
 		description: "지원, 피드백, 협업 문의는 이메일로 연락해 주세요.",
@@ -123,8 +123,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "홈으로 돌아가기",
 	},
 	ru: {
-		metaTitle: "Контакты | smail.pw",
-		metaDescription: "Свяжитесь с поддержкой smail.pw по email.",
+		metaTitle: "Контакты | itshuai.cc",
+		metaDescription: "Свяжитесь с поддержкой itshuai.cc по email.",
 		tag: "Поддержка",
 		title: "Связаться с поддержкой",
 		description:
@@ -137,8 +137,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "На главную",
 	},
 	pt: {
-		metaTitle: "Contato | smail.pw",
-		metaDescription: "Entre em contato com o suporte da smail.pw por email.",
+		metaTitle: "Contato | itshuai.cc",
+		metaDescription: "Entre em contato com o suporte da itshuai.cc por email.",
 		tag: "Suporte",
 		title: "Falar com o suporte",
 		description:
@@ -151,8 +151,8 @@ const CONTACT_COPY: Record<Locale, ContactCopy> = {
 		homeCta: "Voltar para início",
 	},
 	ar: {
-		metaTitle: "اتصل بنا | smail.pw",
-		metaDescription: "تواصل مع دعم smail.pw عبر البريد الإلكتروني.",
+		metaTitle: "اتصل بنا | itshuai.cc",
+		metaDescription: "تواصل مع دعم itshuai.cc عبر البريد الإلكتروني.",
 		tag: "الدعم",
 		title: "التواصل مع الدعم",
 		description:
@@ -192,7 +192,7 @@ export default function ContactPage({ params }: Route.ComponentProps) {
 		description: copy.description,
 		mainEntity: {
 			"@type": "Organization",
-			name: "smail.pw",
+			name: "itshuai.cc",
 			email: SUPPORT_EMAIL,
 		},
 	};

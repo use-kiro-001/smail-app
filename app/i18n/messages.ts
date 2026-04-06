@@ -68,11 +68,11 @@ export interface Dictionary {
 
 const en: Dictionary = {
 	home: {
-		title: "smail.pw Temporary Email (24h) - Free Temp Mail for OTP & Sign-Ups",
+		title: "itshuai.cc Temporary Email (24h) - Free Temp Mail for OTP & Sign-Ups",
 		description:
-			"Generate free temporary email (temp mail) instantly on smail.pw. Use a 24-hour disposable inbox for OTP verification, quick sign-ups, and spam control.",
+			"Generate free temporary email (temp mail) instantly on itshuai.cc. Use a 24-hour disposable inbox for OTP verification, quick sign-ups, and spam control.",
 		keywords:
-			"smail, smail temp mail, temporary email, temp mail, disposable email, temporary email generator, 24 hour temporary email, no registration email, otp email, smail.pw",
+			"itshuai, itshuai temp mail, temporary email, temp mail, disposable email, temporary email generator, 24 hour temporary email, no registration email, otp email, itshuai.cc",
 		heroTag: "Disposable mailbox",
 		heroTitle: "Create a 24-hour temporary email inbox in one tap.",
 		heroDescription:
@@ -131,7 +131,7 @@ const en: Dictionary = {
 			faq: "FAQ",
 			privacy: "Privacy Policy",
 			terms: "Terms of Use",
-			about: "About smail.pw",
+			about: "About itshuai.cc",
 		},
 		copyright: "Clean inbox, clean identity.",
 		themeToLight: "☀ Light",
@@ -141,7 +141,7 @@ const en: Dictionary = {
 
 const zh: Dictionary = {
 	home: {
-		title: "临时邮箱生成器（24小时）- 免费一次性邮箱免注册收验证码 | smail.pw",
+		title: "临时邮箱生成器（24小时）- 免费一次性邮箱免注册收验证码 | itshuai.cc",
 		description:
 			"免费临时邮箱生成器，一键创建 24 小时一次性邮箱。适合临时邮箱注册、验证码接收与在线临时收信，减少垃圾邮件。",
 		keywords:
@@ -202,7 +202,7 @@ const zh: Dictionary = {
 			faq: "常见问题",
 			privacy: "隐私政策",
 			terms: "使用条款",
-			about: "关于 smail.pw",
+			about: "关于 itshuai.cc",
 		},
 		copyright: "让邮箱更干净，让身份更安全。",
 		themeToLight: "☀ 浅色",
@@ -212,11 +212,11 @@ const zh: Dictionary = {
 
 const es: Dictionary = {
 	home: {
-		title: "Correo temporal gratis 24h sin registro para OTP | smail.pw",
+		title: "Correo temporal gratis 24h sin registro para OTP | itshuai.cc",
 		description:
 			"Generador de correo temporal gratis (temp mail) para registros y códigos OTP. Crea un buzón desechable de 24 horas al instante.",
 		keywords:
-			"correo temporal, correo temporal gratis, email temporal, email desechable, temp mail, 24 horas, sin registro, codigo otp, smail.pw",
+			"correo temporal, correo temporal gratis, email temporal, email desechable, temp mail, 24 horas, sin registro, codigo otp, itshuai.cc",
 		heroTag: "Buzón temporal",
 		heroTitle: "Protege tu privacidad con un buzón en un clic.",
 		heroDescription:
@@ -280,11 +280,11 @@ const es: Dictionary = {
 
 const fr: Dictionary = {
 	home: {
-		title: "Email temporaire gratuit 24h sans inscription | smail.pw",
+		title: "Email temporaire gratuit 24h sans inscription | itshuai.cc",
 		description:
 			"Générateur d'email temporaire gratuit (temp mail) pour inscriptions rapides et codes OTP. Créez une boîte jetable 24h immédiatement.",
 		keywords:
-			"email temporaire, email jetable, temp mail, 24h, sans inscription, code otp, boite mail temporaire, smail.pw",
+			"email temporaire, email jetable, temp mail, 24h, sans inscription, code otp, boite mail temporaire, itshuai.cc",
 		heroTag: "Boîte temporaire",
 		heroTitle: "Protégez votre vie privée en un clic.",
 		heroDescription:
@@ -339,7 +339,7 @@ const fr: Dictionary = {
 			faq: "FAQ",
 			privacy: "Confidentialité",
 			terms: "Conditions",
-			about: "À propos de smail.pw",
+			about: "À propos de itshuai.cc",
 		},
 		copyright: "Boîte propre, identité propre.",
 		themeToLight: "☀ Clair",
@@ -349,11 +349,11 @@ const fr: Dictionary = {
 
 const de: Dictionary = {
 	home: {
-		title: "Temporäre E-Mail kostenlos (24h) ohne Registrierung | smail.pw",
+		title: "Temporäre E-Mail kostenlos (24h) ohne Registrierung | itshuai.cc",
 		description:
 			"Kostenloser Temp-Mail-Generator für Registrierungen und OTP-Codes. Erstelle sofort ein 24h Wegwerf-Postfach ohne Konto.",
 		keywords:
-			"temporäre email, wegwerf-email, temp mail, 24h email, ohne registrierung, otp code email, smail.pw",
+			"temporäre email, wegwerf-email, temp mail, 24h email, ohne registrierung, otp code email, itshuai.cc",
 		heroTag: "Temporäres Postfach",
 		heroTitle: "Schütze deine Privatsphäre mit einem Klick.",
 		heroDescription:
@@ -407,7 +407,7 @@ const de: Dictionary = {
 			faq: "FAQ",
 			privacy: "Datenschutz",
 			terms: "Nutzungsbedingungen",
-			about: "Über smail.pw",
+			about: "Über itshuai.cc",
 		},
 		copyright: "Sauberes Postfach, saubere Identität.",
 		themeToLight: "☀ Hell",
@@ -417,11 +417,11 @@ const de: Dictionary = {
 
 const ja: Dictionary = {
 	home: {
-		title: "一時メール（24時間）無料・登録不要でOTP受信 | smail.pw",
+		title: "一時メール（24時間）無料・登録不要でOTP受信 | itshuai.cc",
 		description:
 			"無料の一時メール（temp mail）生成サービス。登録不要で24時間の使い捨て受信箱を作成し、認証コードを受け取れます。",
 		keywords:
-			"一時メール, 使い捨てメール, テンプメール, 24時間メール, 登録不要メール, OTP, 認証メール, smail.pw",
+			"一時メール, 使い捨てメール, テンプメール, 24時間メール, 登録不要メール, OTP, 認証メール, itshuai.cc",
 		heroTag: "一時メールボックス",
 		heroTitle: "ワンクリックでプライバシーを保護。",
 		heroDescription:
@@ -475,7 +475,7 @@ const ja: Dictionary = {
 			faq: "FAQ",
 			privacy: "プライバシー",
 			terms: "利用規約",
-			about: "smail.pw について",
+			about: "itshuai.cc について",
 		},
 		copyright: "受信箱をクリーンに、アイデンティティもクリーンに。",
 		themeToLight: "☀ ライト",
@@ -485,11 +485,11 @@ const ja: Dictionary = {
 
 const ko: Dictionary = {
 	home: {
-		title: "임시 이메일 24시간 무료, 가입 없이 OTP 수신 | smail.pw",
+		title: "임시 이메일 24시간 무료, 가입 없이 OTP 수신 | itshuai.cc",
 		description:
 			"무료 임시 이메일(temp mail) 생성기. 가입 없이 24시간 일회용 메일함을 만들고 인증 코드(OTP)를 빠르게 받으세요.",
 		keywords:
-			"임시 이메일, 일회용 이메일, 템프 메일, 24시간 메일, 가입 없는 이메일, OTP 메일, 인증 메일, smail.pw",
+			"임시 이메일, 일회용 이메일, 템프 메일, 24시간 메일, 가입 없는 이메일, OTP 메일, 인증 메일, itshuai.cc",
 		heroTag: "임시 메일함",
 		heroTitle: "한 번의 클릭으로 개인정보 보호.",
 		heroDescription:
@@ -541,7 +541,7 @@ const ko: Dictionary = {
 			faq: "FAQ",
 			privacy: "개인정보",
 			terms: "이용약관",
-			about: "smail.pw 소개",
+			about: "itshuai.cc 소개",
 		},
 		copyright: "깔끔한 메일함, 깔끔한 신원.",
 		themeToLight: "☀ 라이트",
@@ -551,11 +551,11 @@ const ko: Dictionary = {
 
 const ru: Dictionary = {
 	home: {
-		title: "Временная почта 24 часа бесплатно без регистрации | smail.pw",
+		title: "Временная почта 24 часа бесплатно без регистрации | itshuai.cc",
 		description:
 			"Бесплатный temp mail для регистраций и OTP-кодов. Создайте одноразовый почтовый ящик на 24 часа без аккаунта.",
 		keywords:
-			"временная почта, одноразовая почта, temp mail, почта 24 часа, без регистрации, otp код, smail.pw",
+			"временная почта, одноразовая почта, temp mail, почта 24 часа, без регистрации, otp код, itshuai.cc",
 		heroTag: "Временный ящик",
 		heroTitle: "Защитите приватность в один клик.",
 		heroDescription:
@@ -610,7 +610,7 @@ const ru: Dictionary = {
 			faq: "FAQ",
 			privacy: "Конфиденциальность",
 			terms: "Условия",
-			about: "О smail.pw",
+			about: "О itshuai.cc",
 		},
 		copyright: "Чистый ящик, чистая идентичность.",
 		themeToLight: "☀ Светлая",
@@ -620,11 +620,11 @@ const ru: Dictionary = {
 
 const pt: Dictionary = {
 	home: {
-		title: "Email temporário grátis 24h sem cadastro para OTP | smail.pw",
+		title: "Email temporário grátis 24h sem cadastro para OTP | itshuai.cc",
 		description:
 			"Gerador de temp mail grátis para cadastro e códigos OTP. Crie uma caixa descartável de 24h instantaneamente.",
 		keywords:
-			"email temporario, email temporário, email descartavel, temp mail, 24h, sem cadastro, codigo otp, smail.pw",
+			"email temporario, email temporário, email descartavel, temp mail, 24h, sem cadastro, codigo otp, itshuai.cc",
 		heroTag: "Caixa temporária",
 		heroTitle: "Proteja sua privacidade com um clique.",
 		heroDescription:
@@ -679,7 +679,7 @@ const pt: Dictionary = {
 			faq: "FAQ",
 			privacy: "Privacidade",
 			terms: "Termos",
-			about: "Sobre smail.pw",
+			about: "Sobre itshuai.cc",
 		},
 		copyright: "Caixa limpa, identidade limpa.",
 		themeToLight: "☀ Claro",
@@ -689,11 +689,11 @@ const pt: Dictionary = {
 
 const ar: Dictionary = {
 	home: {
-		title: "بريد مؤقت مجاني 24 ساعة بدون تسجيل لاستلام OTP | smail.pw",
+		title: "بريد مؤقت مجاني 24 ساعة بدون تسجيل لاستلام OTP | itshuai.cc",
 		description:
 			"مولّد بريد مؤقت مجاني (temp mail) للتسجيل السريع ورموز OTP. أنشئ صندوقًا للاستخدام مرة واحدة لمدة 24 ساعة فورًا.",
 		keywords:
-			"بريد مؤقت, بريد مؤقت مجاني, بريد للاستخدام مرة واحدة, temp mail, بريد 24 ساعة, بدون تسجيل, رمز otp, smail.pw",
+			"بريد مؤقت, بريد مؤقت مجاني, بريد للاستخدام مرة واحدة, temp mail, بريد 24 ساعة, بدون تسجيل, رمز otp, itshuai.cc",
 		heroTag: "صندوق مؤقت",
 		heroTitle: "احمِ خصوصيتك بنقرة واحدة.",
 		heroDescription:
@@ -746,7 +746,7 @@ const ar: Dictionary = {
 			faq: "الأسئلة الشائعة",
 			privacy: "الخصوصية",
 			terms: "الشروط",
-			about: "حول smail.pw",
+			about: "حول itshuai.cc",
 		},
 		copyright: "صندوق نظيف، هوية أنظف.",
 		themeToLight: "☀ فاتح",

@@ -32,7 +32,7 @@ import { DEFAULT_THEME, parseThemeFromCookieHeader } from "~/utils/theme";
 import type { Route } from "./+types/root";
 import "./app.css";
 
-const SITE_OG_TITLE = "smail.pw · 24-Hour Temporary Email";
+const SITE_OG_TITLE = "itshuai.cc · 24-Hour Temporary Email";
 const SITE_OG_DESCRIPTION =
 	"Free disposable email inbox with 24-hour auto-expiry. Use a temporary address for sign-ups and verification.";
 
@@ -86,7 +86,7 @@ export function meta({ location }: Route.MetaArgs) {
 			tagName: "link",
 			rel: "alternate",
 			type: "application/rss+xml",
-			title: "smail.pw Blog RSS",
+			title: "itshuai.cc Blog RSS",
 			href: `${BASE_URL}${toLocalePath("/rss.xml", rssLocale)}`,
 		},
 		{
@@ -95,7 +95,7 @@ export function meta({ location }: Route.MetaArgs) {
 		},
 		{
 			property: "og:site_name",
-			content: "smail.pw",
+			content: "itshuai.cc",
 		},
 		{
 			property: "og:url",
@@ -130,22 +130,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
 	const locale = getLocaleFromPathname(location.pathname);
 	const resolvedTheme = theme ?? DEFAULT_THEME;
 
-		return (
-			<html
-				lang={locale}
-				dir={getLocaleDirection(locale)}
-				data-theme={resolvedTheme === "light" ? "light" : undefined}
-			>
-				<head>
-					<meta charSet="utf-8" />
-					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					<Meta />
-					<Links />
-				</head>
-				<body>
-					{children}
-					<ScrollRestoration />
-					<Scripts />
+	return (
+		<html
+			lang={locale}
+			dir={getLocaleDirection(locale)}
+			data-theme={resolvedTheme === "light" ? "light" : undefined}
+		>
+			<head>
+				<meta charSet="utf-8" />
+				<meta name="viewport" content="width=device-width, initial-scale=1" />
+				<Meta />
+				<Links />
+			</head>
+			<body>
+				{children}
+				<ScrollRestoration />
+				<Scripts />
 			</body>
 		</html>
 	);
