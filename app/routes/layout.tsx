@@ -4,9 +4,11 @@ import {
 	NavLink,
 	Outlet,
 	redirect,
+	useFetcher,
 	useLocation,
 	useNavigate,
 } from "react-router";
+import { requireAuth } from "~/.server/auth";
 import {
 	LOCALE_LABELS,
 	type Locale,
@@ -36,6 +38,7 @@ const CONTACT_LABELS: Record<Locale, string> = {
 };
 
 export async function loader({ params, request }: Route.LoaderArgs) {
+	await requireAuth(request);
 	const { locale, shouldRedirectToDefault, isInvalid } = resolveLocaleParam(
 		params.lang,
 	);
@@ -56,6 +59,7 @@ export async function loader({ params, request }: Route.LoaderArgs) {
 }
 
 export default function Layout({ loaderData }: Route.ComponentProps) {
+	const fetcher = useFetcher();
 	const [theme, setTheme] = useState<ThemeMode>(loaderData.theme);
 	const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -330,6 +334,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 									>
 										{theme === "dark" ? copy.themeToLight : copy.themeToDark}
 									</button>
+									<fetcher.Form method="post" action="/logout">
+										<button type="submit" className="mobile-menu-link w-full text-left">
+											{locale === "zh" ? "退出登录" : "Sign out"}
+										</button>
+									</fetcher.Form>
 								</div>
 								<div className="mobile-menu-section">
 									<p className="mobile-menu-section-label">
@@ -416,6 +425,11 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 						>
 							{theme === "dark" ? copy.themeToLight : copy.themeToDark}
 						</button>
+						<fetcher.Form method="post" action="/logout" className="hidden sm:block">
+							<button type="submit" className="theme-toggle">
+								{locale === "zh" ? "退出" : "Sign out"}
+							</button>
+						</fetcher.Form>
 					</div>
 				</header>
 

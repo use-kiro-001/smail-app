@@ -2,7 +2,11 @@ import { createWorkersKVSessionStorage } from "@react-router/cloudflare";
 import { createCookie } from "react-router";
 
 type SessionData = {
-	addresses: string[];
+	// 地址 -> 签发时间戳 的 map
+	addressMap?: Record<string, number>;
+	authed?: boolean;
+	// 兼容旧字段，迁移后可移除
+	addresses?: string[];
 	addressIssuedAt?: number;
 };
 

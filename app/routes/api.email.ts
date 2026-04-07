@@ -1,11 +1,12 @@
 import Parser from "postal-mime";
+import { requireAuth } from "~/.server/auth";
 import { getSession } from "~/.server/session";
 import type { EmailDetail } from "~/types/email";
 import { MAIL_RETENTION_MS } from "~/utils/mail-retention";
 import type { Route } from "./+types/api.email";
 
 function wrapEmailContent(content: string): string {
-	return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -65,39 +66,42 @@ function wrapEmailContent(content: string): string {
 }
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
-	const { id } = params;
-	if (!id) {
-		throw new Response("Not found", { status: 404 });
-	}
-	const d1 = context.cloudflare.env.D1;
-	const r2 = context.cloudflare.env.R2;
-	const mail = await d1
-		.prepare("SELECT * FROM emails WHERE id = ?")
-		.bind(id)
-		.first<EmailDetail>();
-	if (!mail) {
-		throw new Response("Not found", { status: 404 });
-	}
+    await requireAuth(request);
+    const { id } = params;
+    if (!id) {
+        throw new Response("Not found", { status: 404 });
+    }
+    const d1 = context.cloudflare.env.D1;
+    const r2 = context.cloudflare.env.R2;
+    const mail = await d1
+        .prepare("SELECT * FROM emails WHERE id = ?")
+        .bind(id)
+        .first<EmailDetail>();
+    if (!mail) {
+        throw new Response("Not found", { status: 404 });
+    }
 
-	const session = await getSession(request.headers.get("Cookie"));
-	const addresses = session.get("addresses") || [];
-	const addressIssuedAt = session.get("addressIssuedAt");
-	const isAddressExpired =
-		typeof addressIssuedAt === "number" &&
-		Date.now() - addressIssuedAt >= MAIL_RETENTION_MS;
-	if (isAddressExpired || !addresses.includes(mail.to_address)) {
-		throw new Response("Unauthorized", { status: 403 });
-	}
+    const session = await getSession(request.headers.get("Cookie"));
+    const addressMap: Record<string, number> = session.get("addressMap") ?? {};
 
-	const object = await r2.get(id);
-	if (!object) {
-		throw new Response("Not found", { status: 404 });
-	}
+    if (!(mail.to_address in addressMap)) {
+        throw new Response("Unauthorized", { status: 403 });
+    }
 
-	const parser = new Parser();
-	const message = await parser.parse(object.body);
-	const content = message.html || message.text || "";
-	return {
-		body: wrapEmailContent(content),
-	};
+    // 邮件本身 24h 过期校验
+    if (Date.now() - mail.time >= MAIL_RETENTION_MS) {
+        throw new Response("Gone", { status: 410 });
+    }
+
+    const object = await r2.get(id);
+    if (!object) {
+        throw new Response("Not found", { status: 404 });
+    }
+
+    const parser = new Parser();
+    const message = await parser.parse(object.body);
+    const content = message.html || message.text || "";
+    return {
+        body: wrapEmailContent(content),
+    };
 }

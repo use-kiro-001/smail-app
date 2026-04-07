@@ -6,6 +6,7 @@ import {
 	useFetcher,
 	useRevalidator,
 } from "react-router";
+import { requireAuth } from "~/.server/auth";
 import { commitSession, getSession } from "~/.server/session";
 import {
 	DEFAULT_LOCALE,
@@ -19,7 +20,7 @@ import { getDictionary } from "~/i18n/messages";
 import { BASE_URL } from "~/seo.config";
 import type { Email, EmailDetail } from "~/types/email";
 import { generateEmailAddress } from "~/utils/mail";
-import { MAIL_RETENTION_MS } from "~/utils/mail-retention";
+import { ADDRESS_RETENTION_MS, MAIL_RETENTION_MS } from "~/utils/mail-retention";
 import { mergeRouteMeta } from "~/utils/meta";
 import type { Route } from "./+types/home";
 
@@ -422,15 +423,6 @@ export function meta({ params, matches }: Route.MetaArgs) {
 	]);
 }
 
-function isAddressExpired(
-	addressIssuedAt: number | undefined,
-	now = Date.now(),
-): boolean {
-	if (!addressIssuedAt) {
-		return false;
-	}
-	return now - addressIssuedAt >= MAIL_RETENTION_MS;
-}
 
 function EmailModal({
 	email,
@@ -593,6 +585,7 @@ async function getEmails(d1: D1Database, toAddress: string) {
 }
 
 export async function loader({ request, context, params }: Route.LoaderArgs) {
+	await requireAuth(request);
 	const { locale, shouldRedirectToDefault, isInvalid } = resolveLocaleParam(
 		params.lang,
 	);
@@ -605,48 +598,68 @@ export async function loader({ request, context, params }: Route.LoaderArgs) {
 		throw redirect(`${normalizedPath}${url.search}`, 301);
 	}
 
+	const url = new URL(request.url);
+	const selectedAddress = url.searchParams.get("addr") ?? null;
+
 	const cookieHeader = request.headers.get("Cookie");
 	const session = await getSession(cookieHeader);
-	let addresses = (session.get("addresses") || []) as string[];
-	const addressIssuedAt = session.get("addressIssuedAt");
 	const now = Date.now();
+
+	// 迁移旧 session 格式 -> addressMap
+	let addressMap: Record<string, number> = session.get("addressMap") ?? {};
+	const legacyAddresses = session.get("addresses");
+	const legacyIssuedAt = session.get("addressIssuedAt");
 	let shouldCommitSession = false;
 
-	if (addresses.length > 0 && isAddressExpired(addressIssuedAt, now)) {
-		addresses = [generateEmailAddress()];
-		session.set("addresses", addresses);
-		session.set("addressIssuedAt", now);
-		shouldCommitSession = true;
-	} else if (addresses.length > 0 && !addressIssuedAt) {
-		session.set("addressIssuedAt", now);
+	if (legacyAddresses && legacyAddresses.length > 0 && Object.keys(addressMap).length === 0) {
+		for (const addr of legacyAddresses) {
+			addressMap[addr] = legacyIssuedAt ?? now;
+		}
+		session.set("addressMap", addressMap);
+		session.unset("addresses" as never);
+		session.unset("addressIssuedAt" as never);
 		shouldCommitSession = true;
 	}
+
+	// 清理已过期的地址
+	const validAddressMap: Record<string, number> = {};
+	for (const [addr, issuedAt] of Object.entries(addressMap)) {
+		if (now - issuedAt < ADDRESS_RETENTION_MS) {
+			validAddressMap[addr] = issuedAt;
+		}
+	}
+	if (Object.keys(validAddressMap).length !== Object.keys(addressMap).length) {
+		addressMap = validAddressMap;
+		session.set("addressMap", addressMap);
+		shouldCommitSession = true;
+	}
+
+	const addresses = Object.keys(addressMap);
+	const activeAddress = addresses.includes(selectedAddress ?? "")
+		? selectedAddress!
+		: (addresses[0] ?? null);
 
 	const emails =
-		addresses.length > 0
-			? await getEmails(context.cloudflare.env.D1, addresses[0]!)
+		activeAddress
+			? await getEmails(context.cloudflare.env.D1, activeAddress)
 			: [];
 
-	if (shouldCommitSession) {
-		const headers = new Headers();
-		headers.set("Set-Cookie", await commitSession(session));
-		return data(
-			{
-				addresses,
-				emails,
-				locale,
-				renderedAt: now,
-			},
-			{ headers },
-		);
-	}
-
-	return {
+	const responseData = {
+		addressMap,
 		addresses,
+		activeAddress,
 		emails,
 		locale,
 		renderedAt: now,
 	};
+
+	if (shouldCommitSession) {
+		const headers = new Headers();
+		headers.set("Set-Cookie", await commitSession(session));
+		return data(responseData, { headers });
+	}
+
+	return responseData;
 }
 
 export async function action({ request }: Route.ActionArgs) {
@@ -654,37 +667,37 @@ export async function action({ request }: Route.ActionArgs) {
 	const intent = formData.get("intent");
 	const cookieHeader = request.headers.get("Cookie");
 	const session = await getSession(cookieHeader);
-	let addresses: string[] = (session.get("addresses") || []) as string[];
+	let addressMap: Record<string, number> = session.get("addressMap") ?? {};
+	const now = Date.now();
+
 	switch (intent) {
 		case "generate": {
-			addresses = [generateEmailAddress()];
-			session.set("addressIssuedAt", Date.now());
+			const newAddr = generateEmailAddress();
+			addressMap = { ...addressMap, [newAddr]: now };
 			break;
 		}
 		case "delete": {
-			addresses = [];
-			session.unset("addressIssuedAt");
+			const addr = formData.get("address") as string;
+			if (addr && addr in addressMap) {
+				const next = { ...addressMap };
+				delete next[addr];
+				addressMap = next;
+			}
 			break;
 		}
 	}
-	session.set("addresses", addresses);
+
+	session.set("addressMap", addressMap);
 	const cookie = await commitSession(session);
 	const headers = new Headers();
 	headers.set("Set-Cookie", cookie);
-	return data(
-		{
-			addresses: session.get("addresses") || [],
-		},
-		{
-			headers,
-		},
-	);
+	return data({ addressMap }, { headers });
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const fetcher = useFetcher<typeof actionData>();
 	const revalidator = useRevalidator();
-	const [copied, setCopied] = useState(false);
+	const [copied, setCopied] = useState<string | null>(null);
 	const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 	const [lastInboxRefreshAt, setLastInboxRefreshAt] = useState(() =>
 		loaderData.renderedAt,
@@ -694,8 +707,13 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const seoGuides = getSeoGuides(locale);
 	const seoNarrative = getSeoNarrative(locale);
 	const homeJsonLd = getHomeJsonLd(locale);
-	const addresses = fetcher.data?.addresses || loaderData.addresses;
+
+	const addressMap: Record<string, number> =
+		(fetcher.data as { addressMap?: Record<string, number> } | undefined)?.addressMap
+		?? loaderData.addressMap;
+	const addresses = Object.keys(addressMap);
 	const emails = loaderData.emails;
+	const activeAddress = loaderData.activeAddress;
 	const isSubmitting = fetcher.state === "submitting";
 	const submittingIntent = fetcher.formData?.get("intent");
 	const isRefreshingInbox = revalidator.state !== "idle";
@@ -756,122 +774,128 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 
 				<section className="glass-panel px-4 py-4 sm:px-5 sm:py-4">
 					<div className="grid gap-4">
+						{/* 邮箱地址列表 */}
 						<div>
-							<div className="mb-3 space-y-1">
+							<div className="mb-3 flex items-center justify-between gap-3">
 								<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
 									{copy.currentAddress}
 								</p>
-								<p className="text-theme-muted hidden text-xs sm:block">
-									{copy.noAddressDescription}
-								</p>
+								<button
+									type="button"
+									className="neo-button text-xs"
+									onClick={() => {
+										fetcher.submit({ intent: "generate" }, { method: "post" });
+									}}
+									disabled={isSubmitting}
+								>
+									{submittingIntent === "generate" && isSubmitting
+										? copy.generating
+										: copy.generateNew}
+								</button>
 							</div>
-							<div className="space-y-4">
-								{addresses.length > 0 ? (
-									<>
-										<div className="theme-card p-3">
-												<div className="border-theme-soft bg-theme-subtle flex flex-col gap-2 rounded-xl border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-													<div className="text-theme-primary min-w-0 text-sm font-semibold break-all sm:truncate">
-														{addresses[0]}
-													</div>
-													<button
-														type="button"
-														className="neo-button-secondary w-full sm:w-auto sm:min-w-20"
-														onClick={async () => {
-															if (
-																typeof navigator !== "undefined" &&
-															navigator.clipboard
-														) {
-															try {
-																await navigator.clipboard.writeText(
-																	addresses[0] ?? "",
-																);
-																setCopied(true);
-																setTimeout(() => setCopied(false), 1500);
-															} catch {
-																// ignore clipboard errors
-															}
-														}
-													}}
-												>
-													{copied ? copy.copied : copy.copy}
-												</button>
-											</div>
-										</div>
 
-										<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-											<button
-												type="button"
-												name="intent"
-												value="generate"
-												className="neo-button w-full justify-center sm:min-w-[10.5rem] sm:w-auto"
-												onClick={() => {
-													fetcher.submit(
-														{ intent: "generate" },
-														{ method: "post" },
-													);
-												}}
-												disabled={isSubmitting}
-											>
-												{submittingIntent === "generate" && isSubmitting
-													? copy.generating
-													: copy.generateNew}
-											</button>
-											<button
-												type="button"
-												name="intent"
-												value="delete"
-												className="neo-button-secondary w-full justify-center sm:w-auto"
-												onClick={() => {
-													fetcher.submit(
-														{ intent: "delete" },
-														{ method: "post" },
-													);
-												}}
-												disabled={isSubmitting}
-											>
-												{submittingIntent === "delete" && isSubmitting
-													? copy.deleting
-													: copy.deleteAddress}
-											</button>
-										</div>
-
-										<p className="border-theme-soft bg-theme-subtle text-theme-faint rounded-lg border px-3 py-2 text-[11px] leading-relaxed">
-											{copy.safetyHint}
-										</p>
-									</>
-								) : (
-									<div className="theme-card p-3">
-										<div className="text-theme-primary text-sm font-semibold">
-											{copy.noAddressTitle}
-										</div>
-										<p className="text-theme-muted mt-1 text-xs leading-relaxed">
-											{copy.noAddressDescription}
-										</p>
-										<button
-											type="button"
-											name="intent"
-											value="generate"
-											className="neo-button mt-3 w-full justify-center sm:w-auto sm:min-w-[10.5rem]"
-											onClick={() => {
-												fetcher.submit(
-													{ intent: "generate" },
-													{ method: "post" },
-												);
-											}}
-											disabled={isSubmitting}
-										>
-											{submittingIntent === "generate" && isSubmitting
-												? copy.generating
-												: copy.generateAddress}
-										</button>
-										<p className="border-theme-soft bg-theme-subtle text-theme-faint mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed">
-											{copy.safetyHint}
-										</p>
+							{addresses.length === 0 ? (
+								<div className="theme-card p-3">
+									<div className="text-theme-primary text-sm font-semibold">
+										{copy.noAddressTitle}
 									</div>
-								)}
-							</div>
+									<p className="text-theme-muted mt-1 text-xs leading-relaxed">
+										{copy.noAddressDescription}
+									</p>
+									<button
+										type="button"
+										className="neo-button mt-3 w-full justify-center sm:w-auto sm:min-w-[10.5rem]"
+										onClick={() => {
+											fetcher.submit({ intent: "generate" }, { method: "post" });
+										}}
+										disabled={isSubmitting}
+									>
+										{submittingIntent === "generate" && isSubmitting
+											? copy.generating
+											: copy.generateAddress}
+									</button>
+								</div>
+							) : (
+								<div className="space-y-2">
+									{addresses.map((addr) => {
+										const isActive = addr === activeAddress;
+										const issuedAt = addressMap[addr]!;
+										const daysLeft = Math.max(
+											0,
+											Math.ceil(
+												(issuedAt + ADDRESS_RETENTION_MS - loaderData.renderedAt) /
+												(1000 * 60 * 60 * 24),
+											),
+										);
+										return (
+											<div
+												key={addr}
+												className={`border-theme-soft rounded-xl border px-3 py-2.5 transition-colors ${isActive ? "bg-theme-subtle" : "hover:bg-theme-subtle/50"}`}
+											>
+												<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+													<div className="min-w-0 flex-1">
+														<Link
+															to={`?addr=${encodeURIComponent(addr)}`}
+															prefetch="intent"
+															className={`block truncate text-sm font-semibold ${isActive ? "text-theme-primary" : "text-theme-secondary"}`}
+														>
+															{addr}
+														</Link>
+														<p className="text-theme-faint mt-0.5 text-[10px]">
+															{daysLeft > 0 ? `${daysLeft}d left` : "Expires today"}
+														</p>
+													</div>
+													<div className="flex items-center gap-2">
+														<button
+															type="button"
+															className="neo-button-secondary text-xs"
+															onClick={async () => {
+																if (typeof navigator !== "undefined" && navigator.clipboard) {
+																	try {
+																		await navigator.clipboard.writeText(addr);
+																		setCopied(addr);
+																		setTimeout(() => setCopied(null), 1500);
+																	} catch {
+																		// ignore
+																	}
+																}
+															}}
+														>
+															{copied === addr ? copy.copied : copy.copy}
+														</button>
+														<button
+															type="button"
+															className="neo-button-secondary text-xs"
+															onClick={() => {
+																fetcher.submit(
+																	{ intent: "delete", address: addr },
+																	{ method: "post" },
+																);
+															}}
+															disabled={isSubmitting}
+														>
+															{submittingIntent === "delete" &&
+																isSubmitting &&
+																fetcher.formData?.get("address") === addr
+																? copy.deleting
+																: copy.deleteAddress}
+														</button>
+													</div>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							)}
+
+							{addresses.length > 0 && (
+								<p className="border-theme-soft bg-theme-subtle text-theme-faint mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed">
+									{copy.safetyHint}
+								</p>
+							)}
 						</div>
 
+						{/* 收件箱 */}
 						<div className="border-theme-soft border-t border-dashed pt-3">
 							<div className="mb-3 flex items-start justify-between gap-3">
 								<div>
@@ -881,6 +905,11 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 									<p className="text-theme-primary font-display text-xl font-semibold">
 										{copy.inboxTitle}
 									</p>
+									{activeAddress && (
+										<p className="text-theme-faint mt-0.5 max-w-[200px] truncate text-[11px] sm:max-w-xs">
+											{activeAddress}
+										</p>
+									)}
 									<p className="text-theme-faint mt-1 text-[11px]">
 										{copy.lastRefresh}:{" "}
 										{formatRefreshTime(lastInboxRefreshAt, locale)}
@@ -893,14 +922,10 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 									<button
 										type="button"
 										className="theme-badge px-3 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-										onClick={() => {
-											revalidator.revalidate();
-										}}
+										onClick={() => revalidator.revalidate()}
 										disabled={isRefreshingInbox}
 									>
-										{isRefreshingInbox
-											? copy.refreshingInbox
-											: copy.refreshInbox}
+										{isRefreshingInbox ? copy.refreshingInbox : copy.refreshInbox}
 									</button>
 								</div>
 							</div>
@@ -929,11 +954,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 														{email.subject}
 													</div>
 													<div className="text-theme-faint whitespace-nowrap text-[11px]">
-														{formatTime(
-															email.time,
-															locale,
-															loaderData.renderedAt,
-														)}
+														{formatTime(email.time, locale, loaderData.renderedAt)}
 													</div>
 												</div>
 												<div className="text-theme-muted mt-1 truncate text-xs">
@@ -1000,3 +1021,6 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 		</div>
 	);
 }
+
+
+
