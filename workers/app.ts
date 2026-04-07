@@ -23,15 +23,16 @@ export default {
 		});
 	},
 	async email(msg, env) {
-		const parser = new Parser();
+		// 先把 ReadableStream 完整读取为 ArrayBuffer
 		const ab = await new Response(msg.raw).arrayBuffer();
+		const parser = new Parser();
 		const parsed = await parser.parse(ab);
 		const id = nanoid();
 
 		await env.D1.prepare(
 			"INSERT INTO emails (id, to_address, from_name, from_address, subject, time) VALUES (?, ?, ?, ?, ?, ?)",
 		)
-			.bind(id, msg.to, parsed.from?.name, parsed.from?.address, parsed.subject, Date.now())
+			.bind(id, msg.to, parsed.from?.name ?? null, parsed.from?.address ?? null, parsed.subject ?? null, Date.now())
 			.run();
 
 		await env.R2.put(id, ab);
