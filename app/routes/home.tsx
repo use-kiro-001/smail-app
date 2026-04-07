@@ -772,153 +772,127 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 					</div>
 				</section>
 
-				<section className="glass-panel px-4 py-4 sm:px-5 sm:py-4">
-					<div className="grid gap-4">
-						{/* 邮箱地址列表 */}
-						<div>
-							<div className="mb-3 flex items-center justify-between gap-3">
+				<section className="glass-panel overflow-hidden">
+					{/* 左右分栏：移动端竖排，桌面端横排 */}
+					<div className="flex flex-col sm:flex-row sm:divide-x sm:divide-[var(--line-soft)]">
+
+						{/* 左栏：地址管理 */}
+						<div className="flex w-full flex-col sm:w-64 sm:shrink-0 lg:w-72">
+							{/* 左栏头部 */}
+							<div className="flex items-center justify-between gap-2 border-b border-[var(--line-soft)] px-4 py-3">
 								<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
 									{copy.currentAddress}
 								</p>
 								<button
 									type="button"
-									className="neo-button text-xs"
-									onClick={() => {
-										fetcher.submit({ intent: "generate" }, { method: "post" });
-									}}
+									className="neo-button px-3 py-1.5 text-[11px]"
+									onClick={() => fetcher.submit({ intent: "generate" }, { method: "post" })}
 									disabled={isSubmitting}
 								>
-									{submittingIntent === "generate" && isSubmitting
-										? copy.generating
-										: copy.generateNew}
+									{submittingIntent === "generate" && isSubmitting ? copy.generating : "+ New"}
 								</button>
 							</div>
 
-							{addresses.length === 0 ? (
-								<div className="theme-card p-3">
-									<div className="text-theme-primary text-sm font-semibold">
-										{copy.noAddressTitle}
+							{/* 地址列表 */}
+							<div className="flex-1 overflow-y-auto p-2">
+								{addresses.length === 0 ? (
+									<div className="flex flex-col items-center justify-center gap-3 px-4 py-10 text-center">
+										<p className="text-theme-primary text-sm font-semibold">{copy.noAddressTitle}</p>
+										<p className="text-theme-muted text-xs leading-relaxed">{copy.noAddressDescription}</p>
+										<button
+											type="button"
+											className="neo-button px-4 py-2 text-xs"
+											onClick={() => fetcher.submit({ intent: "generate" }, { method: "post" })}
+											disabled={isSubmitting}
+										>
+											{submittingIntent === "generate" && isSubmitting ? copy.generating : copy.generateAddress}
+										</button>
 									</div>
-									<p className="text-theme-muted mt-1 text-xs leading-relaxed">
-										{copy.noAddressDescription}
-									</p>
-									<button
-										type="button"
-										className="neo-button mt-3 w-full justify-center sm:w-auto sm:min-w-[10.5rem]"
-										onClick={() => {
-											fetcher.submit({ intent: "generate" }, { method: "post" });
-										}}
-										disabled={isSubmitting}
-									>
-										{submittingIntent === "generate" && isSubmitting
-											? copy.generating
-											: copy.generateAddress}
-									</button>
-								</div>
-							) : (
-								<div className="space-y-2">
-									{addresses.map((addr) => {
-										const isActive = addr === activeAddress;
-										const issuedAt = addressMap[addr]!;
-										const daysLeft = Math.max(
-											0,
-											Math.ceil(
-												(issuedAt + ADDRESS_RETENTION_MS - loaderData.renderedAt) /
-												(1000 * 60 * 60 * 24),
-											),
-										);
-										return (
-											<div
-												key={addr}
-												className={`border-theme-soft rounded-xl border px-3 py-2.5 transition-colors ${isActive ? "bg-theme-subtle" : "hover:bg-theme-subtle/50"}`}
-											>
-												<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-													<div className="min-w-0 flex-1">
-														<Link
-															to={`?addr=${encodeURIComponent(addr)}`}
-															prefetch="intent"
-															className={`block truncate text-sm font-semibold ${isActive ? "text-theme-primary" : "text-theme-secondary"}`}
-														>
+								) : (
+									<div className="space-y-1">
+										{addresses.map((addr) => {
+											const isActive = addr === activeAddress;
+											const issuedAt = addressMap[addr]!;
+											const daysLeft = Math.max(
+												0,
+												Math.ceil((issuedAt + ADDRESS_RETENTION_MS - loaderData.renderedAt) / (1000 * 60 * 60 * 24)),
+											);
+											return (
+												<div key={addr} className={`group relative rounded-xl transition-colors ${isActive ? "bg-theme-soft border border-[var(--line-strong)]" : "border border-transparent hover:bg-theme-subtle"}`}>
+													<Link
+														to={`?addr=${encodeURIComponent(addr)}`}
+														prefetch="intent"
+														className="block min-w-0 px-3 py-2.5"
+													>
+														<p className={`truncate text-[13px] font-semibold ${isActive ? "text-theme-primary" : "text-theme-secondary"}`}>
 															{addr}
-														</Link>
+														</p>
 														<p className="text-theme-faint mt-0.5 text-[10px]">
 															{daysLeft > 0 ? `${daysLeft}d left` : "Expires today"}
 														</p>
-													</div>
-													<div className="flex items-center gap-2">
+													</Link>
+													{/* 操作按钮：hover 时显示 */}
+													<div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 														<button
 															type="button"
-															className="neo-button-secondary text-xs"
-															onClick={async () => {
+															title={copy.copy}
+															className="neo-button-secondary flex h-6 w-6 items-center justify-center rounded-lg p-0 text-[10px]"
+															onClick={async (e) => {
+																e.preventDefault();
 																if (typeof navigator !== "undefined" && navigator.clipboard) {
 																	try {
 																		await navigator.clipboard.writeText(addr);
 																		setCopied(addr);
 																		setTimeout(() => setCopied(null), 1500);
-																	} catch {
-																		// ignore
-																	}
+																	} catch { /* ignore */ }
 																}
 															}}
 														>
-															{copied === addr ? copy.copied : copy.copy}
+															{copied === addr ? "✓" : "⎘"}
 														</button>
 														<button
 															type="button"
-															className="neo-button-secondary text-xs"
-															onClick={() => {
-																fetcher.submit(
-																	{ intent: "delete", address: addr },
-																	{ method: "post" },
-																);
-															}}
+															title={copy.deleteAddress}
+															className="neo-button-secondary flex h-6 w-6 items-center justify-center rounded-lg p-0 text-[10px]"
+															onClick={() => fetcher.submit({ intent: "delete", address: addr }, { method: "post" })}
 															disabled={isSubmitting}
 														>
-															{submittingIntent === "delete" &&
-																isSubmitting &&
-																fetcher.formData?.get("address") === addr
-																? copy.deleting
-																: copy.deleteAddress}
+															✕
 														</button>
 													</div>
 												</div>
-											</div>
-										);
-									})}
-								</div>
-							)}
+											);
+										})}
+									</div>
+								)}
+							</div>
 
+							{/* 安全提示 */}
 							{addresses.length > 0 && (
-								<p className="border-theme-soft bg-theme-subtle text-theme-faint mt-3 rounded-lg border px-3 py-2 text-[11px] leading-relaxed">
-									{copy.safetyHint}
-								</p>
+								<div className="border-t border-[var(--line-soft)] px-4 py-3">
+									<p className="text-theme-faint text-[10px] leading-relaxed">{copy.safetyHint}</p>
+								</div>
 							)}
 						</div>
 
-						{/* 收件箱 */}
-						<div className="border-theme-soft border-t border-dashed pt-3">
-							<div className="mb-3 flex items-start justify-between gap-3">
-								<div>
+						{/* 右栏：收件箱 */}
+						<div className="flex min-w-0 flex-1 flex-col">
+							{/* 右栏头部 */}
+							<div className="flex items-center justify-between gap-3 border-b border-[var(--line-soft)] px-4 py-3">
+								<div className="min-w-0">
 									<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
 										{copy.inboxTag}
 									</p>
-									<p className="text-theme-primary font-display text-xl font-semibold">
-										{copy.inboxTitle}
-									</p>
 									{activeAddress && (
-										<p className="text-theme-faint mt-0.5 max-w-[200px] truncate text-[11px] sm:max-w-xs">
+										<p className="text-theme-secondary mt-0.5 truncate text-[12px] font-medium">
 											{activeAddress}
 										</p>
 									)}
-									<p className="text-theme-faint mt-1 text-[11px]">
-										{copy.lastRefresh}:{" "}
-										{formatRefreshTime(lastInboxRefreshAt, locale)}
-									</p>
 								</div>
-								<div className="flex flex-col items-end gap-2">
-									<span className="theme-badge hidden px-3 py-1 text-[11px] font-medium sm:inline-flex">
-										{copy.tapToOpen}
-									</span>
+								<div className="flex shrink-0 items-center gap-2">
+									<p className="text-theme-faint hidden text-[10px] sm:block">
+										{copy.lastRefresh}: {formatRefreshTime(lastInboxRefreshAt, locale)}
+									</p>
 									<button
 										type="button"
 										className="theme-badge px-3 py-1 text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-60"
@@ -930,41 +904,35 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 								</div>
 							</div>
 
-							<div className="flex min-h-[360px] flex-col gap-2.5 overflow-y-auto py-1 pr-0.5">
+							{/* 邮件列表 */}
+							<div className="flex min-h-[400px] flex-1 flex-col gap-0 overflow-y-auto">
 								{emails.length === 0 ? (
-									<div className="border-theme-strong bg-theme-subtle mt-6 rounded-2xl border border-dashed px-4 py-10 text-center">
-										<p className="text-theme-primary font-display text-lg font-semibold">
+									<div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
+										<p className="text-theme-primary font-display text-base font-semibold">
 											{copy.emptyInboxTitle}
 										</p>
-										<p className="text-theme-muted mt-1 text-sm">
-											{copy.emptyInboxDescription}
-										</p>
+										<p className="text-theme-muted text-sm">{copy.emptyInboxDescription}</p>
 									</div>
 								) : (
-									emails.map((email) => (
+									emails.map((email, i) => (
 										<button
 											key={email.id}
 											type="button"
-											className="email-item"
+											className={`w-full px-4 py-3 text-left transition-colors hover:bg-theme-subtle ${i !== 0 ? "border-t border-[var(--line-soft)]" : ""}`}
 											onClick={() => setSelectedEmail(email)}
 										>
-											<div className="min-w-0">
-												<div className="flex items-start justify-between gap-3">
-													<div className="text-theme-primary font-display truncate text-sm font-semibold">
-														{email.subject}
-													</div>
-													<div className="text-theme-faint whitespace-nowrap text-[11px]">
-														{formatTime(email.time, locale, loaderData.renderedAt)}
-													</div>
-												</div>
-												<div className="text-theme-muted mt-1 truncate text-xs">
-													{email.from_name}
-													<span className="text-theme-faint">
-														{" "}
-														&lt;{email.from_address}&gt;
-													</span>
-												</div>
+											<div className="flex items-start justify-between gap-3">
+												<p className="text-theme-primary truncate text-sm font-semibold">
+													{email.subject}
+												</p>
+												<p className="text-theme-faint shrink-0 whitespace-nowrap text-[11px]">
+													{formatTime(email.time, locale, loaderData.renderedAt)}
+												</p>
 											</div>
+											<p className="text-theme-muted mt-0.5 truncate text-xs">
+												{email.from_name}{" "}
+												<span className="text-theme-faint">&lt;{email.from_address}&gt;</span>
+											</p>
 										</button>
 									))
 								)}
