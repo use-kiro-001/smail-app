@@ -699,19 +699,21 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const revalidator = useRevalidator();
 	const [copied, setCopied] = useState<string | null>(null);
 	const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
+	const [addressSearch, setAddressSearch] = useState("");
 	const [lastInboxRefreshAt, setLastInboxRefreshAt] = useState(() =>
 		loaderData.renderedAt,
 	);
 	const locale = loaderData.locale || DEFAULT_LOCALE;
 	const copy = getDictionary(locale).home;
-	const seoGuides = getSeoGuides(locale);
-	const seoNarrative = getSeoNarrative(locale);
 	const homeJsonLd = getHomeJsonLd(locale);
 
 	const addressMap: Record<string, number> =
 		(fetcher.data as { addressMap?: Record<string, number> } | undefined)?.addressMap
 		?? loaderData.addressMap;
 	const addresses = Object.keys(addressMap);
+	const filteredAddresses = addressSearch.trim()
+		? addresses.filter((a) => a.toLowerCase().includes(addressSearch.toLowerCase()))
+		: addresses;
 	const emails = loaderData.emails;
 	const activeAddress = loaderData.activeAddress;
 	const isSubmitting = fetcher.state === "submitting";
@@ -723,58 +725,16 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	}, [loaderData.renderedAt]);
 
 	return (
-		<div className="flex flex-1 py-3 sm:py-4">
+		<div className="flex flex-1 flex-col py-3 sm:py-4">
 			<script
 				type="application/ld+json"
 				dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
 			/>
-			<div className="grid w-full gap-4">
-				<section className="glass-panel relative overflow-hidden px-4 py-4 sm:px-6 sm:py-5">
-					<div
-						className="absolute -left-20 -top-24 h-44 w-44 rounded-full opacity-80 blur-[88px]"
-						style={{ background: "var(--accent-a)" }}
-					/>
-					<div
-						className="absolute -right-14 top-20 h-36 w-36 rounded-full opacity-75 blur-[82px]"
-						style={{ background: "var(--accent-b)" }}
-					/>
-					<div className="relative space-y-3">
-						<header className="space-y-2.5">
-							<p className="soft-tag">{copy.heroTag}</p>
-							<h1 className="text-theme-primary font-display max-w-2xl text-xl leading-tight font-bold sm:text-3xl">
-								{copy.heroTitle}
-							</h1>
-							<p className="text-theme-secondary max-w-xl text-sm leading-relaxed">
-								{copy.heroDescription}
-							</p>
-						</header>
+			<div className="flex flex-1 flex-col gap-4 w-full">
 
-						<div className="theme-badge flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-[10px] sm:text-[11px]">
-							<span className="text-theme-faint">
-								<span className="text-theme-primary font-display font-semibold">
-									{copy.stats.lifetimeValue}
-								</span>{" "}
-								{copy.stats.lifetime}
-							</span>
-							<span className="text-theme-faint">
-								<span className="text-theme-primary font-display font-semibold">
-									{copy.stats.refreshValue}
-								</span>{" "}
-								{copy.stats.refresh}
-							</span>
-							<span className="text-theme-faint">
-								<span className="text-theme-primary font-display font-semibold">
-									{copy.stats.registrationValue}
-								</span>{" "}
-								{copy.stats.registration}
-							</span>
-						</div>
-					</div>
-				</section>
-
-				<section className="glass-panel overflow-hidden">
+				<section className="glass-panel flex flex-1 flex-col overflow-hidden">
 					{/* 左右分栏：移动端竖排，桌面端横排 */}
-					<div className="flex flex-col sm:flex-row sm:divide-x sm:divide-[var(--line-soft)]">
+					<div className="flex min-h-0 flex-1 flex-col sm:flex-row sm:divide-x sm:divide-[var(--line-soft)]">
 
 						{/* 左栏：地址管理 */}
 						<div className="flex w-full flex-col sm:w-64 sm:shrink-0 lg:w-72">
@@ -793,6 +753,19 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 								</button>
 							</div>
 
+							{/* 搜索框 */}
+							{addresses.length > 0 && (
+								<div className="border-b border-[var(--line-soft)] px-3 py-2">
+									<input
+										type="search"
+										value={addressSearch}
+										onChange={(e) => setAddressSearch(e.target.value)}
+										placeholder="Search addresses..."
+										className="w-full rounded-lg border border-[var(--line-soft)] bg-transparent px-3 py-1.5 text-[12px] text-theme-primary placeholder:text-theme-faint outline-none focus:border-[var(--line-strong)] focus:ring-1 focus:ring-[var(--line-strong)]"
+									/>
+								</div>
+							)}
+
 							{/* 地址列表 */}
 							<div className="flex-1 overflow-y-auto p-2">
 								{addresses.length === 0 ? (
@@ -810,7 +783,11 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 									</div>
 								) : (
 									<div className="space-y-1">
-										{addresses.map((addr) => {
+										{filteredAddresses.length === 0 ? (
+											<p className="px-3 py-4 text-center text-[11px] text-theme-faint">
+												No results for "{addressSearch}"
+											</p>
+										) : filteredAddresses.map((addr) => {
 											const isActive = addr === activeAddress;
 											const issuedAt = addressMap[addr]!;
 											const daysLeft = Math.max(
@@ -905,7 +882,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 							</div>
 
 							{/* 邮件列表 */}
-							<div className="flex min-h-[400px] flex-1 flex-col gap-0 overflow-y-auto">
+							<div className="flex min-h-[600px] flex-1 flex-col gap-0 overflow-y-auto">
 								{emails.length === 0 ? (
 									<div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center">
 										<p className="text-theme-primary font-display text-base font-semibold">
@@ -937,43 +914,6 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 									))
 								)}
 							</div>
-						</div>
-					</div>
-				</section>
-
-				<section className="glass-panel px-4 py-4 sm:px-5 sm:py-5">
-					<h2 className="text-theme-primary font-display mb-3 text-lg font-semibold sm:text-xl">
-						{seoNarrative.title}
-					</h2>
-					<div className="grid gap-3 lg:grid-cols-[0.92fr,1.08fr]">
-						<div className="theme-card space-y-3 p-4">
-							<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
-								{seoGuides.title}
-							</p>
-							<div className="grid gap-2 sm:grid-cols-2">
-								{seoGuides.items.map((item) => (
-									<Link
-										key={item.path}
-										to={toLocalePath(item.path, locale)}
-										prefetch="viewport"
-										className="theme-badge flex items-center justify-between px-3 py-1.5 text-[11px] font-medium"
-									>
-										<span>{item.label}</span>
-										<span aria-hidden="true">{"->"}</span>
-									</Link>
-								))}
-							</div>
-						</div>
-
-						<div className="theme-card space-y-3 p-4">
-							<p className="text-theme-secondary text-xs leading-relaxed sm:text-sm">
-								{seoNarrative.description}
-							</p>
-							<ul className="text-theme-muted list-disc space-y-1 pl-5 text-[11px] leading-relaxed sm:text-xs">
-								{seoNarrative.points.map((point) => (
-									<li key={point}>{point}</li>
-								))}
-							</ul>
 						</div>
 					</div>
 				</section>
