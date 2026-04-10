@@ -47,4 +47,5 @@ export default [
 		),
 	]),
 	route("/api/email/:id", "routes/api.email.ts"),
+	route("/api/note", "routes/api.note.ts"),
 ] satisfies RouteConfig;

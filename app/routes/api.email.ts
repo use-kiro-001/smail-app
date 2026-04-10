@@ -88,7 +88,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
         throw new Response("Unauthorized", { status: 403 });
     }
 
-    // 邮件本身 24h 过期校验
+    // 邮件过期校验（30 天）
     if (Date.now() - mail.time >= MAIL_RETENTION_MS) {
         throw new Response("Gone", { status: 410 });
     }

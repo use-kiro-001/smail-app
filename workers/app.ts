@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import Parser from "postal-mime";
 import { createRequestHandler } from "react-router";
+import { getRetentionCutoff } from "../app/utils/mail-retention";
 
 declare module "react-router" {
 	export interface AppLoadContext {
@@ -37,6 +38,23 @@ export default {
 
 		await env.R2.put(id, ab);
 	},
-	async scheduled() {
+	async scheduled(_, env) {
+		// 清理 24h 前的过期邮件（D1 元数据 + R2 原始内容）
+		const cutoff = getRetentionCutoff();
+		const { results } = await env.D1.prepare(
+			"SELECT id FROM emails WHERE time < ?",
+		)
+			.bind(cutoff)
+			.all<{ id: string }>();
+
+		if (results.length > 0) {
+			// 批量删除 R2 对象
+			await Promise.all(results.map((row) => env.R2.delete(row.id)));
+			// 批量删除 D1 记录
+			const placeholders = results.map(() => "?").join(", ");
+			await env.D1.prepare(`DELETE FROM emails WHERE id IN (${placeholders})`)
+				.bind(...results.map((row) => row.id))
+				.run();
+		}
 	},
 } satisfies ExportedHandler<Env>;

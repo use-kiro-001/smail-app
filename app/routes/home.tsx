@@ -644,11 +644,25 @@ export async function loader({ request, context, params }: Route.LoaderArgs) {
 			? await getEmails(context.cloudflare.env.D1, activeAddress)
 			: [];
 
+	// 查询所有地址的备注
+	const notes: Record<string, string> = {};
+	if (addresses.length > 0) {
+		const placeholders = addresses.map(() => "?").join(", ");
+		const { results } = await context.cloudflare.env.D1
+			.prepare(`SELECT address, note FROM address_notes WHERE address IN (${placeholders})`)
+			.bind(...addresses)
+			.all<{ address: string; note: string }>();
+		for (const row of results) {
+			notes[row.address] = row.note;
+		}
+	}
+
 	const responseData = {
 		addressMap,
 		addresses,
 		activeAddress,
 		emails,
+		notes,
 		locale,
 		renderedAt: now,
 	};
@@ -696,10 +710,13 @@ export async function action({ request }: Route.ActionArgs) {
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const fetcher = useFetcher<typeof actionData>();
+	const noteFetcher = useFetcher();
 	const revalidator = useRevalidator();
 	const [copied, setCopied] = useState<string | null>(null);
 	const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
 	const [addressSearch, setAddressSearch] = useState("");
+	const [notes, setNotes] = useState<Record<string, string>>(() => loaderData.notes ?? {});
+	const [editingNote, setEditingNote] = useState<string | null>(null);
 	const [lastInboxRefreshAt, setLastInboxRefreshAt] = useState(() =>
 		loaderData.renderedAt,
 	);
@@ -723,6 +740,10 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	useEffect(() => {
 		setLastInboxRefreshAt(loaderData.renderedAt);
 	}, [loaderData.renderedAt]);
+
+	useEffect(() => {
+		setNotes(loaderData.notes ?? {});
+	}, [loaderData.notes]);
 
 	return (
 		<div className="flex flex-1 flex-col py-3 sm:py-4">
@@ -808,8 +829,43 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 															{daysLeft > 0 ? `${daysLeft}d left` : "Expires today"}
 														</p>
 													</Link>
+													{/* 备注区域 */}
+													{editingNote === addr ? (
+														<div className="px-3 pb-2.5" onClick={(e) => e.preventDefault()}>
+															<input
+																autoFocus
+																type="text"
+																defaultValue={notes[addr] ?? ""}
+																placeholder="Add a note..."
+																className="w-full rounded-lg border border-[var(--line-soft)] bg-transparent px-2 py-1 text-[11px] text-theme-primary placeholder:text-theme-faint outline-none focus:border-[var(--line-strong)]"
+																onBlur={(e) => {
+																	const val = e.target.value.trim();
+																	setNotes((prev) => ({ ...prev, [addr]: val }));
+																	setEditingNote(null);
+																	noteFetcher.submit(
+																		JSON.stringify({ address: addr, note: val }),
+																		{ method: "post", action: "/api/note", encType: "application/json" },
+																	);
+																}}
+																onKeyDown={(e) => {
+																	if (e.key === "Enter") e.currentTarget.blur();
+																	if (e.key === "Escape") setEditingNote(null);
+																}}
+															/>
+														</div>
+													) : (
+														<button
+															type="button"
+															className="w-full px-3 pb-2 text-left"
+															onClick={(e) => { e.preventDefault(); setEditingNote(addr); }}
+														>
+															<p className="truncate text-[10px] text-theme-faint italic">
+																{notes[addr] ? notes[addr] : "＋ note"}
+															</p>
+														</button>
+													)}
 													{/* 操作按钮：hover 时显示 */}
-													<div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+													<div className="absolute right-2 top-3 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
 														<button
 															type="button"
 															title={copy.copy}
