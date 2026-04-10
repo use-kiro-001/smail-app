@@ -20,7 +20,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const token = (formData.get("token") as string) ?? "";
     const redirectTo = (formData.get("redirectTo") as string) || "/";
 
-    const accessToken = (context.cloudflare.env as Record<string, string>).ACCESS_TOKEN;
+    const accessToken = (context.cloudflare.env as unknown as { ACCESS_TOKEN?: string }).ACCESS_TOKEN;
     if (!verifyToken(token, accessToken)) {
         return data({ error: "Invalid access token." }, { status: 401 });
     }
