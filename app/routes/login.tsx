@@ -16,8 +16,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     // 读取 URL 中的 token 参数
     const url = new URL(request.url);
     const tokenFromUrl = url.searchParams.get("token");
+    const isLogout = url.searchParams.get("logout") === "1";
 
-    return { tokenFromUrl };
+    return { tokenFromUrl, shouldCheckLocalStorage: !tokenFromUrl && !isLogout, isLogout };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -88,6 +89,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function Login({ loaderData, actionData }: Route.ComponentProps) {
     const tokenFromUrl = loaderData?.tokenFromUrl;
+    const shouldCheckLocalStorage = loaderData?.shouldCheckLocalStorage;
+    const isLogout = loaderData?.isLogout;
 
     return (
         <div className="flex min-h-dvh items-center justify-center px-4">
@@ -102,9 +105,30 @@ export default function Login({ loaderData, actionData }: Route.ComponentProps) 
                 </div>
 
                 <form method="post" className="space-y-4" ref={(form) => {
-                    // 如果 URL 中有 token，自动提交表单
-                    if (tokenFromUrl && form && !actionData?.error) {
+                    if (!form) return;
+
+                    // 如果是退出登录，清除 localStorage
+                    if (isLogout && typeof window !== "undefined") {
+                        localStorage.removeItem("smail_invite_code");
+                        return;
+                    }
+
+                    // 如果 URL 中有 token，自动提交
+                    if (tokenFromUrl && !actionData?.error) {
                         form.submit();
+                        return;
+                    }
+
+                    // 如果没有 URL token，检查 localStorage
+                    if (shouldCheckLocalStorage && typeof window !== "undefined") {
+                        const savedToken = localStorage.getItem("smail_invite_code");
+                        if (savedToken) {
+                            const tokenInput = form.querySelector<HTMLInputElement>('input[name="token"]');
+                            if (tokenInput) {
+                                tokenInput.value = savedToken;
+                                form.submit();
+                            }
+                        }
                     }
                 }}>
                     <input
@@ -133,6 +157,12 @@ export default function Login({ loaderData, actionData }: Route.ComponentProps) 
                             defaultValue={tokenFromUrl || ""}
                             className="border-theme-strong bg-theme-subtle text-theme-primary w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/40"
                             placeholder="••••••••"
+                            onInput={(e) => {
+                                // 用户手动输入时，保存到 localStorage
+                                if (typeof window !== "undefined" && e.currentTarget.value) {
+                                    localStorage.setItem("smail_invite_code", e.currentTarget.value);
+                                }
+                            }}
                         />
                     </div>
 
