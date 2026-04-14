@@ -30,6 +30,7 @@ export default [
 	}),
 	route("/login", "routes/login.tsx"),
 	route("/logout", "routes/logout.tsx"),
+	route("/invite", "routes/invite.tsx"),
 	route("/robots.txt", "routes/robots.txt.tsx"),
 	route("/sitemap.xml", "routes/sitemap.xml.tsx"),
 	route("/rss.xml", "routes/rss.xml.tsx", { id: "rss-default" }),

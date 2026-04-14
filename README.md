@@ -39,6 +39,12 @@
 
 - 首页临时邮箱收件箱
 - 邮件预览弹窗（解析 HTML/Text）
+- 多邮箱地址管理（生成、删除、备注）
+- **邀请码系统**：
+  - 管理员可生成邀请码，设置使用次数和有效期
+  - 邀请码用户通过邀请码登录，受次数限制
+  - Session 绑定防止邀请码共享
+  - 自动清理过期邀请码
 - 多语言路由（`/:lang?`）
 - SEO 路由：`/robots.txt`、`/sitemap.xml`、`/rss.xml`
 - 多语言 Markdown 页面（about/faq/privacy/terms + 长尾 SEO 落地页）
@@ -110,8 +116,74 @@ pnpm run preview
 - `pnpm run build`：生产构建
 - `pnpm run preview`：本地预览构建产物
 - `pnpm run typecheck`：Cloudflare 类型生成 + 路由类型生成 + TS 检查
+- `pnpm run test`：运行单元测试
+- `pnpm run test:watch`：监听模式运行测试
 - `pnpm run deploy`：构建后部署到 Cloudflare Workers
 - `pnpm run migrate`：对远端 D1（`smail-v3`）执行迁移
+
+## 测试
+
+项目使用 Vitest 进行单元测试，测试文件位于 `tests/` 目录。
+
+### 运行测试
+
+```bash
+# 运行所有测试
+pnpm run test
+
+# 监听模式（开发时使用）
+pnpm run test:watch
+```
+
+### 测试覆盖
+
+当前测试覆盖以下模块：
+
+#### 1. 认证与多邮箱管理（`tests/auth.test.ts`）
+- `verifyToken`：ACCESS_TOKEN 验证逻辑
+- `isAddressExpired`：地址过期判断
+- `addressMap` 多邮箱管理逻辑（生成、删除、过期清理）
+
+#### 2. 邀请码系统（`tests/invite.test.ts`）
+- **邀请码生成**：8 位字符、小写字母+数字、唯一性
+- **额度管理**：
+  - 新邀请码 `used_count` 初始为 0
+  - 消耗后递增，用完后拒绝
+  - 过期邀请码拒绝使用
+  - 永不过期的邀请码只要有额度就可用
+- **Session 绑定**：
+  - 首次使用时绑定 session
+  - 已绑定的邀请码只允许同一 session
+  - 防止邀请码共享
+- **过期清理**：
+  - 批量清理过期邀请码
+  - 永不过期的邀请码不被清理
+- **角色权限**：
+  - 管理员可创建邀请码，无生成地址限制
+  - 邀请码用户不能创建邀请码，生成地址需检查额度
+- **并发安全**：
+  - 模拟并发场景，验证额度不会超发
+
+### 测试说明
+
+- 所有测试均为纯逻辑单元测试，不依赖 Cloudflare 运行时（D1/KV/R2）
+- 实际的数据库操作需要在集成测试或本地 `wrangler dev` 环境中验证
+- 测试使用 `vitest` 框架，配置文件为 `vitest.config.ts`
+
+### 添加新测试
+
+在 `tests/` 目录下创建 `*.test.ts` 文件，参考现有测试编写：
+
+```typescript
+import { describe, expect, it } from "vitest";
+
+describe("功能模块名称", () => {
+    it("测试用例描述", () => {
+        // 测试逻辑
+        expect(result).toBe(expected);
+    });
+});
+```
 
 ## Cloudflare 资源绑定
 
@@ -126,13 +198,28 @@ pnpm run preview
 
 当前迁移文件：
 
-- `migrations/20260211_create_emails.sql`
-- `migrations/20260212_email_indexes.sql`
+- `migrations/20260211_create_emails.sql` — 邮件元数据表
+- `migrations/20260212_email_indexes.sql` — 邮件索引
+- `migrations/20260410_add_address_notes.sql` — 地址备注表
+- `migrations/20260413_create_invites.sql` — 邀请码表
 
 首次部署或表结构变更后，执行：
 
 ```bash
 pnpm run migrate
+```
+
+### 邀请码表结构
+
+```sql
+CREATE TABLE IF NOT EXISTS invites (
+    code         TEXT PRIMARY KEY,      -- 邀请码
+    max_uses     INTEGER NOT NULL,      -- 最大使用次数
+    used_count   INTEGER NOT NULL DEFAULT 0,  -- 已使用次数
+    created_at   INTEGER NOT NULL,      -- 创建时间戳
+    expires_at   INTEGER,               -- 过期时间戳（NULL 表示永不过期）
+    bound_session TEXT                  -- 绑定的 session ID（防止共享）
+);
 ```
 
 ## 多语言与 SEO
@@ -152,8 +239,26 @@ pnpm run deploy
 
 ```bash
 pnpm run typecheck
+pnpm run test
 pnpm run build
 ```
+
+### 首次部署
+
+1. 确保已配置 Cloudflare 账号和 wrangler
+2. 执行数据库迁移：`pnpm run migrate`
+3. 设置环境变量：
+   - `ACCESS_TOKEN`：管理员登录凭证
+   - `SESSION_SECRET`：Session 签名密钥
+4. 部署：`pnpm run deploy`
+
+### 邀请码使用流程
+
+1. 管理员登录后访问 `/invite` 页面
+2. 设置使用次数和有效期，生成邀请码
+3. 将邀请码链接分享给用户（格式：`https://itshuai.cc/login?token=邀请码`）
+4. 用户使用邀请码登录，可生成有限次数的临时邮箱地址
+5. 邀请码首次使用时绑定到该用户的 session，防止共享
 
 ## 重要边界
 

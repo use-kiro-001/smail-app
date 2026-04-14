@@ -224,6 +224,15 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 							>
 								{contactLabel}
 							</NavLink>
+							<NavLink
+								to="/invite"
+								prefetch="viewport"
+								className={({ isActive }) =>
+									isActive ? "nav-pill-active" : "nav-pill"
+								}
+							>
+								Invite
+							</NavLink>
 						</nav>
 						<div className="mobile-menu sm:hidden" ref={mobileMenuRef}>
 							<button
@@ -319,6 +328,16 @@ export default function Layout({ loaderData }: Route.ComponentProps) {
 									}
 								>
 									{contactLabel}
+								</NavLink>
+								<NavLink
+									to="/invite"
+									prefetch="viewport"
+									onClick={closeMobileMenu}
+									className={({ isActive }) =>
+										isActive ? "mobile-menu-link-active" : "mobile-menu-link"
+									}
+								>
+									Invite
 								</NavLink>
 								<div className="mobile-menu-section">
 									<p className="mobile-menu-section-label">

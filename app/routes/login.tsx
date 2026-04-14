@@ -21,13 +21,62 @@ export async function action({ request, context }: Route.ActionArgs) {
     const redirectTo = (formData.get("redirectTo") as string) || "/";
 
     const accessToken = (context.cloudflare.env as unknown as { ACCESS_TOKEN?: string }).ACCESS_TOKEN;
-    if (!verifyToken(token, accessToken)) {
-        return data({ error: "Invalid access token." }, { status: 401 });
+    const session = await getSession(request.headers.get("Cookie"));
+    const headers = new Headers();
+
+    // 先检查是否是管理员 token
+    if (verifyToken(token, accessToken)) {
+        session.set("authed", true);
+        session.set("role", "admin");
+        headers.set("Set-Cookie", await commitSession(session));
+        throw redirect(redirectTo, { headers });
     }
 
-    const session = await getSession(request.headers.get("Cookie"));
+    // 不是管理员 token，尝试作为邀请码查询
+    const now = Date.now();
+    const invite = await context.cloudflare.env.D1
+        .prepare("SELECT * FROM invites WHERE code = ?")
+        .bind(token)
+        .first<{
+            code: string;
+            max_uses: number;
+            used_count: number;
+            created_at: number;
+            expires_at: number | null;
+            bound_session: string | null;
+        }>();
+
+    if (!invite) {
+        return data({ error: "Invalid access token or invite code." }, { status: 401 });
+    }
+
+    // 检查是否过期
+    if (invite.expires_at !== null && invite.expires_at < now) {
+        return data({ error: "This invite code has expired." }, { status: 401 });
+    }
+
+    // 检查是否已用完
+    if (invite.used_count >= invite.max_uses) {
+        return data({ error: "This invite code has been fully used." }, { status: 401 });
+    }
+
+    // 检查是否已绑定到其他 session
+    const sessionId = session.id;
+    if (invite.bound_session !== null && invite.bound_session !== sessionId) {
+        return data({ error: "This invite code is already in use by another user." }, { status: 401 });
+    }
+
+    // 首次使用时绑定 session
+    if (invite.bound_session === null) {
+        await context.cloudflare.env.D1
+            .prepare("UPDATE invites SET bound_session = ? WHERE code = ?")
+            .bind(sessionId, token)
+            .run();
+    }
+
     session.set("authed", true);
-    const headers = new Headers();
+    session.set("role", "invite");
+    session.set("inviteCode", token);
     headers.set("Set-Cookie", await commitSession(session));
     throw redirect(redirectTo, { headers });
 }

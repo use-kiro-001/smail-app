@@ -657,6 +657,24 @@ export async function loader({ request, context, params }: Route.LoaderArgs) {
 		}
 	}
 
+	// 获取用户角色和邀请码剩余额度
+	const role = session.get("role") ?? "admin"; // 兼容旧 session
+	const inviteCode = session.get("inviteCode");
+	let inviteQuota: { remaining: number; max: number } | null = null;
+
+	if (role === "invite" && inviteCode) {
+		const invite = await context.cloudflare.env.D1
+			.prepare("SELECT max_uses, used_count FROM invites WHERE code = ?")
+			.bind(inviteCode)
+			.first<{ max_uses: number; used_count: number }>();
+		if (invite) {
+			inviteQuota = {
+				remaining: Math.max(0, invite.max_uses - invite.used_count),
+				max: invite.max_uses,
+			};
+		}
+	}
+
 	const responseData = {
 		addressMap,
 		addresses,
@@ -665,6 +683,8 @@ export async function loader({ request, context, params }: Route.LoaderArgs) {
 		notes,
 		locale,
 		renderedAt: now,
+		role,
+		inviteQuota,
 	};
 
 	if (shouldCommitSession) {
@@ -676,7 +696,7 @@ export async function loader({ request, context, params }: Route.LoaderArgs) {
 	return responseData;
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, context }: Route.ActionArgs) {
 	const formData = await request.formData();
 	const intent = formData.get("intent");
 	const cookieHeader = request.headers.get("Cookie");
@@ -686,8 +706,36 @@ export async function action({ request }: Route.ActionArgs) {
 
 	switch (intent) {
 		case "generate": {
+			// 如果是邀请码用户，检查并消耗额度
+			const role = session.get("role");
+			const inviteCode = session.get("inviteCode");
+
+			if (role === "invite" && inviteCode) {
+				// 原子操作：检查并递增 used_count
+				const result = await context.cloudflare.env.D1
+					.prepare(
+						"UPDATE invites SET used_count = used_count + 1 WHERE code = ? AND used_count < max_uses AND (expires_at IS NULL OR expires_at > ?)",
+					)
+					.bind(inviteCode, now)
+					.run();
+
+				if (result.meta.changes === 0) {
+					// 额度已用完或邀请码已过期
+					return data({ addressMap, error: "quotaExhausted" });
+				}
+			}
+
 			const newAddr = generateEmailAddress();
 			addressMap = { ...addressMap, [newAddr]: now };
+
+			// 写入白名单，记录所有者
+			await context.cloudflare.env.D1
+				.prepare(
+					"INSERT INTO active_addresses (address, session_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+				)
+				.bind(newAddr, session.id, now, now + ADDRESS_RETENTION_MS)
+				.run();
+
 			break;
 		}
 		case "delete": {
@@ -696,6 +744,12 @@ export async function action({ request }: Route.ActionArgs) {
 				const next = { ...addressMap };
 				delete next[addr];
 				addressMap = next;
+
+				// 从白名单移除
+				await context.cloudflare.env.D1
+					.prepare("DELETE FROM active_addresses WHERE address = ?")
+					.bind(addr)
+					.run();
 			}
 			break;
 		}
@@ -737,6 +791,12 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const submittingIntent = fetcher.formData?.get("intent");
 	const isRefreshingInbox = revalidator.state !== "idle";
 
+	// 邀请码用户的额度信息
+	const role = loaderData.role;
+	const inviteQuota = loaderData.inviteQuota;
+	const fetcherError = (fetcher.data as { error?: string } | undefined)?.error;
+	const isQuotaExhausted = inviteQuota?.remaining === 0 || fetcherError === "quotaExhausted";
+
 	useEffect(() => {
 		setLastInboxRefreshAt(loaderData.renderedAt);
 	}, [loaderData.renderedAt]);
@@ -761,14 +821,23 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 						<div className="flex w-full flex-col sm:w-64 sm:shrink-0 lg:w-72">
 							{/* 左栏头部 */}
 							<div className="flex items-center justify-between gap-2 border-b border-[var(--line-soft)] px-4 py-3">
-								<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
-									{copy.currentAddress}
-								</p>
+								<div>
+									<p className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em]">
+										{copy.currentAddress}
+									</p>
+									{inviteQuota && (
+										<p className={`text-[10px] mt-0.5 ${isQuotaExhausted ? "text-red-500" : "text-theme-faint"}`}>
+											{isQuotaExhausted
+												? (locale === "zh" ? "额度已用完" : "Quota exhausted")
+												: (locale === "zh" ? `剩余 ${inviteQuota.remaining} 次` : `${inviteQuota.remaining} left`)}
+										</p>
+									)}
+								</div>
 								<button
 									type="button"
-									className="neo-button px-3 py-1.5 text-[11px]"
+									className="neo-button px-3 py-1.5 text-[11px] disabled:opacity-50 disabled:cursor-not-allowed"
 									onClick={() => fetcher.submit({ intent: "generate" }, { method: "post" })}
-									disabled={isSubmitting}
+									disabled={isSubmitting || isQuotaExhausted}
 								>
 									{submittingIntent === "generate" && isSubmitting ? copy.generating : "+ New"}
 								</button>
