@@ -12,7 +12,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     if (session.get("authed")) {
         throw redirect("/");
     }
-    return {};
+
+    // 读取 URL 中的 token 参数
+    const url = new URL(request.url);
+    const tokenFromUrl = url.searchParams.get("token");
+
+    return { tokenFromUrl };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -81,7 +86,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     throw redirect(redirectTo, { headers });
 }
 
-export default function Login({ actionData }: Route.ComponentProps) {
+export default function Login({ loaderData, actionData }: Route.ComponentProps) {
+    const tokenFromUrl = loaderData?.tokenFromUrl;
+
     return (
         <div className="flex min-h-dvh items-center justify-center px-4">
             <div className="glass-panel w-full max-w-sm space-y-6 px-6 py-8">
@@ -90,11 +97,16 @@ export default function Login({ actionData }: Route.ComponentProps) {
                         smail.pw
                     </h1>
                     <p className="text-theme-secondary text-sm">
-                        Enter your access token to continue.
+                        {tokenFromUrl ? "Logging you in..." : "Enter your access token to continue."}
                     </p>
                 </div>
 
-                <form method="post" className="space-y-4">
+                <form method="post" className="space-y-4" ref={(form) => {
+                    // 如果 URL 中有 token，自动提交表单
+                    if (tokenFromUrl && form && !actionData?.error) {
+                        form.submit();
+                    }
+                }}>
                     <input
                         type="hidden"
                         name="redirectTo"
@@ -118,6 +130,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                             required
                             autoFocus
                             autoComplete="current-password"
+                            defaultValue={tokenFromUrl || ""}
                             className="border-theme-strong bg-theme-subtle text-theme-primary w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/40"
                             placeholder="••••••••"
                         />
