@@ -76,7 +76,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function InvitePage({ loaderData }: Route.ComponentProps) {
     const fetcher = useFetcher();
     const [maxUses, setMaxUses] = useState(5);
-    const [expiresInDays, setExpiresInDays] = useState(7);
+    const [expiresInDays, setExpiresInDays] = useState(0);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
     const invites = loaderData.invites;
@@ -189,8 +189,8 @@ export default function InvitePage({ loaderData }: Route.ComponentProps) {
                                     <div
                                         key={invite.code}
                                         className={`flex flex-wrap items-center gap-3 p-3 rounded-lg border ${status === "active"
-                                                ? "border-[var(--line-soft)] bg-theme-subtle"
-                                                : "border-red-500/20 bg-red-500/5"
+                                            ? "border-[var(--line-soft)] bg-theme-subtle"
+                                            : "border-red-500/20 bg-red-500/5"
                                             }`}
                                     >
                                         <code className="font-mono text-sm text-theme-primary">
@@ -199,13 +199,13 @@ export default function InvitePage({ loaderData }: Route.ComponentProps) {
                                         <span className="text-xs text-theme-faint">
                                             {invite.used_count}/{invite.max_uses} used
                                         </span>
-                                        {invite.expires_at && (
-                                            <span className="text-xs text-theme-faint">
-                                                {isExpired
+                                        <span className="text-xs text-theme-faint">
+                                            {invite.expires_at === null
+                                                ? "Never expires"
+                                                : isExpired
                                                     ? "Expired"
                                                     : `Expires ${new Date(invite.expires_at).toLocaleDateString()}`}
-                                            </span>
-                                        )}
+                                        </span>
                                         {invite.bound_session && (
                                             <span className="text-xs text-theme-faint">
                                                 🔒 Bound
@@ -213,8 +213,8 @@ export default function InvitePage({ loaderData }: Route.ComponentProps) {
                                         )}
                                         <span
                                             className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${status === "active"
-                                                    ? "bg-green-500/20 text-green-600"
-                                                    : "bg-red-500/20 text-red-500"
+                                                ? "bg-green-500/20 text-green-600"
+                                                : "bg-red-500/20 text-red-500"
                                                 }`}
                                         >
                                             {status}

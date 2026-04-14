@@ -826,10 +826,10 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 										{copy.currentAddress}
 									</p>
 									{inviteQuota && (
-										<p className={`text-[10px] mt-0.5 ${isQuotaExhausted ? "text-red-500" : "text-theme-faint"}`}>
+										<p className={`text-xs mt-1 font-medium ${isQuotaExhausted ? "text-red-500" : "text-theme-secondary"}`}>
 											{isQuotaExhausted
 												? (locale === "zh" ? "额度已用完" : "Quota exhausted")
-												: (locale === "zh" ? `剩余 ${inviteQuota.remaining} 次` : `${inviteQuota.remaining} left`)}
+												: (locale === "zh" ? `剩余 ${inviteQuota.remaining}/${inviteQuota.max}` : `${inviteQuota.remaining}/${inviteQuota.max} left`)}
 										</p>
 									)}
 								</div>
