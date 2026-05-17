@@ -771,6 +771,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	const [addressSearch, setAddressSearch] = useState("");
 	const [notes, setNotes] = useState<Record<string, string>>(() => loaderData.notes ?? {});
 	const [editingNote, setEditingNote] = useState<string | null>(null);
+	const [notesPanelOpen, setNotesPanelOpen] = useState(false);
 	const [lastInboxRefreshAt, setLastInboxRefreshAt] = useState(() =>
 		loaderData.renderedAt,
 	);
@@ -804,6 +805,30 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 	useEffect(() => {
 		setNotes(loaderData.notes ?? {});
 	}, [loaderData.notes]);
+
+	// 统一的保存备注方法：写入本地 state + 调用后端 API
+	const saveNote = (addr: string, value: string) => {
+		setNotes((prev) => ({ ...prev, [addr]: value }));
+		noteFetcher.submit(
+			JSON.stringify({ address: addr, note: value }),
+			{ method: "post", action: "/api/note", encType: "application/json" },
+		);
+	};
+
+	// 左栏单行 input 兼容多行：只替换/写入第一行，保留剩余行
+	const saveFirstLine = (addr: string, firstLine: string) => {
+		const current = notes[addr] ?? "";
+		const rest = current.includes("\n") ? current.slice(current.indexOf("\n")) : "";
+		const next = (firstLine + rest).trimEnd();
+		saveNote(addr, next);
+	};
+
+	// 提取第一行用于左栏预览（非编辑态）
+	const getFirstLine = (text: string | undefined): string => {
+		if (!text) return "";
+		const idx = text.indexOf("\n");
+		return idx === -1 ? text : text.slice(0, idx);
+	};
 
 	return (
 		<div className="flex flex-1 flex-col py-3 sm:py-4">
@@ -898,23 +923,19 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 															{daysLeft > 0 ? `${daysLeft}d left` : "Expires today"}
 														</p>
 													</Link>
-													{/* 备注区域 */}
+													{/* 备注区域：单行快速编辑（仅编辑第一行，保留多行内容） */}
 													{editingNote === addr ? (
 														<div className="px-3 pb-2.5" onClick={(e) => e.preventDefault()}>
 															<input
 																autoFocus
 																type="text"
-																defaultValue={notes[addr] ?? ""}
+																defaultValue={getFirstLine(notes[addr])}
 																placeholder="Add a note..."
 																className="w-full rounded-lg border border-[var(--line-soft)] bg-transparent px-2 py-1 text-[11px] text-theme-primary placeholder:text-theme-faint outline-none focus:border-[var(--line-strong)]"
 																onBlur={(e) => {
 																	const val = e.target.value.trim();
-																	setNotes((prev) => ({ ...prev, [addr]: val }));
 																	setEditingNote(null);
-																	noteFetcher.submit(
-																		JSON.stringify({ address: addr, note: val }),
-																		{ method: "post", action: "/api/note", encType: "application/json" },
-																	);
+																	saveFirstLine(addr, val);
 																}}
 																onKeyDown={(e) => {
 																	if (e.key === "Enter") e.currentTarget.blur();
@@ -929,7 +950,10 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 															onClick={(e) => { e.preventDefault(); setEditingNote(addr); }}
 														>
 															<p className="truncate text-[10px] text-theme-faint italic">
-																{notes[addr] ? notes[addr] : "＋ note"}
+																{getFirstLine(notes[addr]) || "＋ note"}
+																{notes[addr] && notes[addr].includes("\n") && (
+																	<span className="ml-1 not-italic text-theme-muted">…</span>
+																)}
 															</p>
 														</button>
 													)}
@@ -1005,6 +1029,67 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 									</button>
 								</div>
 							</div>
+
+							{/* 多行记事面板：折叠/展开，关联当前选中地址 */}
+							{activeAddress && (() => {
+								const noteText = notes[activeAddress] ?? "";
+								const previewLine = getFirstLine(noteText);
+								const placeholderLabel = locale === "zh" ? "点击展开记事..." : "Click to add notes...";
+								const titleLabel = locale === "zh" ? "记事" : "Notes";
+								const hintLabel = locale === "zh"
+									? "仅自己可见 · 自动保存"
+									: "Visible only to you · Auto-saved";
+								return (
+									<div className="border-b border-[var(--line-soft)]">
+										<button
+											type="button"
+											className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors hover:bg-theme-subtle"
+											onClick={() => setNotesPanelOpen((v) => !v)}
+											aria-expanded={notesPanelOpen}
+										>
+											<div className="flex min-w-0 items-center gap-2">
+												<span className="text-[12px]">📝</span>
+												<span className="text-theme-faint text-[11px] font-semibold uppercase tracking-[0.16em] shrink-0">
+													{titleLabel}
+												</span>
+												<span className="text-theme-muted truncate text-[11px]">
+													{previewLine || placeholderLabel}
+												</span>
+											</div>
+											<svg
+												viewBox="0 0 20 20"
+												fill="none"
+												stroke="currentColor"
+												strokeWidth="1.8"
+												aria-hidden="true"
+												className={`h-3.5 w-3.5 shrink-0 text-theme-faint transition-transform ${notesPanelOpen ? "rotate-180" : ""}`}
+											>
+												<path d="M5 7.5L10 12.5L15 7.5" strokeLinecap="round" strokeLinejoin="round" />
+											</svg>
+										</button>
+										{notesPanelOpen && (
+											<div className="border-t border-[var(--line-soft)] px-4 py-3">
+												<textarea
+													key={activeAddress}
+													defaultValue={noteText}
+													placeholder={locale === "zh"
+														? "在这里写下与该邮箱相关的任何内容（密码提示、用途、备注…）"
+														: "Anything to remember for this address (purpose, hints, context...)"}
+													rows={5}
+													className="w-full resize-y rounded-lg border border-[var(--line-soft)] bg-theme-subtle px-3 py-2 text-[12px] leading-relaxed text-theme-primary placeholder:text-theme-faint outline-none focus:border-[var(--line-strong)] focus:ring-1 focus:ring-[var(--line-strong)]"
+													onBlur={(e) => {
+														const val = e.target.value;
+														if (val !== noteText) saveNote(activeAddress, val);
+													}}
+												/>
+												<p className="mt-1.5 text-[10px] text-theme-faint">
+													{hintLabel}
+												</p>
+											</div>
+										)}
+									</div>
+								);
+							})()}
 
 							{/* 邮件列表 */}
 							<div className="flex min-h-[600px] flex-1 flex-col gap-0 overflow-y-auto">

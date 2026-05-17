@@ -14,8 +14,8 @@ type SessionData = {
 	addressIssuedAt?: number;
 };
 
-// Session Cookie 有效期与地址保留期一致：30 天
-const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 秒
+// Session Cookie 有效期与地址保留期一致：90 天
+const SESSION_MAX_AGE = 90 * 24 * 60 * 60; // 秒
 
 let sessionStorage: ReturnType<
 	typeof createWorkersKVSessionStorage<SessionData>
